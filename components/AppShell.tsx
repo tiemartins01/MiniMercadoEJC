@@ -2,10 +2,10 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import type { LucideIcon } from "lucide-react";
 import {
   BarChart3,
   Boxes,
+  ClipboardList,
   LayoutDashboard,
   LogOut,
   PackageOpen,
@@ -13,12 +13,6 @@ import {
   ShoppingCart,
   Tags,
 } from "lucide-react";
-
-type MenuItem = {
-  href: string;
-  label: string;
-  icon: LucideIcon;
-};
 
 export default function AppShell({
   children,
@@ -30,48 +24,20 @@ export default function AppShell({
   const pathname = usePathname();
   const router = useRouter();
 
-  const items: MenuItem[] = [
-    {
-      href: "/painel",
-      label: "Painel",
-      icon: LayoutDashboard,
-    },
-    {
-      href: "/vendas",
-      label: "Realizar venda",
-      icon: ShoppingCart,
-    },
-    {
-      href: "/finalizar-venda",
-      label: "Encerrar compra",
-      icon: ReceiptText,
-    },
-    {
-      href: "/estoque",
-      label: "Estoque",
-      icon: PackageOpen,
-    },
-  ];
-
-  if (admin) {
-    items.push(
-      {
-        href: "/admin",
-        label: "Admin",
-        icon: BarChart3,
-      },
-      {
-        href: "/admin/produtos",
-        label: "Produtos",
-        icon: Tags,
-      },
-      {
-        href: "/admin/relatorios",
-        label: "Relatórios",
-        icon: Boxes,
-      }
-    );
-  }
+  const items = [
+    ["/painel", "Painel", LayoutDashboard],
+    ["/vendas", "Realizar venda", ShoppingCart],
+    ["/comandas", "Comandas", ClipboardList],
+    ["/finalizar-venda", "Encerrar compra", ReceiptText],
+    ["/estoque", "Estoque", PackageOpen],
+    ...(admin
+      ? ([
+          ["/admin", "Admin", BarChart3],
+          ["/admin/produtos", "Produtos", Tags],
+          ["/admin/relatorios", "Relatórios", Boxes],
+        ] as const)
+      : []),
+  ] as const;
 
   async function sair() {
     await fetch("/api/auth/logout", {
@@ -80,6 +46,14 @@ export default function AppShell({
 
     router.push("/login");
     router.refresh();
+  }
+
+  function isActive(href: string) {
+    if (href === "/admin") {
+      return pathname === href;
+    }
+
+    return pathname === href || pathname.startsWith(`${href}/`);
   }
 
   return (
@@ -120,7 +94,6 @@ export default function AppShell({
 
           <div>
             <b style={{ fontSize: 18 }}>EJC</b>
-
             <div
               style={{
                 fontSize: 12,
@@ -138,30 +111,24 @@ export default function AppShell({
             gap: 7,
           }}
         >
-          {items.map((item) => {
-            const Icon = item.icon;
-
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                style={{
-                  display: "flex",
-                  gap: 10,
-                  alignItems: "center",
-                  padding: "11px 12px",
-                  borderRadius: 11,
-                  background:
-                    pathname === item.href ? "#f47a20" : "transparent",
-                  color:
-                    pathname === item.href ? "white" : "#eadfd7",
-                }}
-              >
-                <Icon size={18} />
-                {item.label}
-              </Link>
-            );
-          })}
+          {items.map(([href, label, Icon]) => (
+            <Link
+              key={href}
+              href={href}
+              style={{
+                display: "flex",
+                gap: 10,
+                alignItems: "center",
+                padding: "11px 12px",
+                borderRadius: 11,
+                background: isActive(href) ? "#f47a20" : "transparent",
+                color: isActive(href) ? "white" : "#eadfd7",
+              }}
+            >
+              <Icon size={18} />
+              {label}
+            </Link>
+          ))}
         </nav>
 
         <button
