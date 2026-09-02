@@ -1,246 +1,305 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { ChevronDown, ChevronUp, ReceiptText, Users } from "lucide-react";
 import Guard from "@/components/Guard";
 import Title from "@/components/Title";
-import type { CartItem, CompradorVenda } from "@/lib/types";
+import type { Comanda } from "@/lib/types";
+
+const cores = [
+  "AZUL",
+  "AMARELO",
+  "VERDE",
+  "VERMELHO",
+  "LARANJA",
+  "ROSA",
+] as const;
+
+function moeda(valor: number) {
+  return Number(valor).toLocaleString("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  });
+}
 
 function Content() {
-  const [cart, setCart] = useState<CartItem[]>([]);
-  const [comprador, setComprador] = useState<CompradorVenda | null>(null);
-  const [msg, setMsg] = useState("");
-  const [loading, setLoading] = useState(false);
-  const router = useRouter();
+  const [comandas, setComandas] = useState<Comanda[]>([]);
+  const [aberto, setAberto] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [erro, setErro] = useState("");
 
-  useEffect(() => {
-    setCart(JSON.parse(localStorage.getItem("ejc-cart") || "[]"));
-    setComprador(
-      JSON.parse(localStorage.getItem("ejc-comprador") || "null"),
-    );
-  }, []);
-
-  const total = useMemo(
-    () =>
-      cart.reduce(
-        (soma, item) => soma + item.preco * item.quantidade,
-        0,
-      ),
-    [cart],
-  );
-
-  async function finalizar() {
-    if (!comprador || !cart.length) {
-      return;
-    }
-
+  async function carregar() {
     setLoading(true);
-    setMsg("");
+    setErro("");
 
     try {
-      const response = await fetch("/api/vendas", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          ...comprador,
-          itens: cart.map((item) => ({
-            produtoId: item.id,
-            quantidade: item.quantidade,
-          })),
-        }),
+      const response = await fetch("/api/comandas", {
+        cache: "no-store",
       });
-
       const data = await response.json();
 
       if (!response.ok) {
-        setMsg(data.error || "Falha ao finalizar a venda.");
-        return;
+        throw new Error(data.error || "Falha ao carregar as contas abertas.");
       }
 
-      localStorage.removeItem("ejc-cart");
-      localStorage.removeItem("ejc-comprador");
-      setCart([]);
-
-      const valor = Number(data.total).toLocaleString("pt-BR", {
-        style: "currency",
-        currency: "BRL",
-      });
-
-      if (data.comandaId) {
-        setMsg(
-          `Pedido #${data.pedidoId} adicionado à comanda com sucesso — ${valor}`,
-        );
-      } else {
-        setMsg(`Pedido #${data.pedidoId} finalizado com sucesso — ${valor}`);
-      }
-    } catch {
-      setMsg("Não foi possível finalizar a venda.");
+      setComandas(data.comandas || []);
+    } catch (error) {
+      setErro(
+        error instanceof Error
+          ? error.message
+          : "Falha ao carregar as contas abertas.",
+      );
     } finally {
       setLoading(false);
     }
+  }
+
+  useEffect(() => {
+    carregar();
+  }, []);
+
+  const encontristasPorCor = useMemo(() => {
+    const mapa = new Map<string, Comanda[]>();
+
+    for (const cor of cores) {
+      mapa.set(cor, []);
+    }
+
+    for (const comanda of comandas) {
+      if (comanda.tipo !== "ENCONTRISTA") {
+        continue;
+      }
+
+      const cor = comanda.cor || "SEM_COR";
+      const atuais = mapa.get(cor) || [];
+      atuais.push(comanda);
+      mapa.set(cor, atuais);
+    }
+
+    return mapa;
+  }, [comandas]);
+
+  const servosSala = useMemo(
+    () => comandas.filter((comanda) => comanda.tipo === "SERVO_SALA"),
+    [comandas],
+  );
+
+  function toggle(chave: string) {
+    setAberto((atual) => (atual === chave ? null : chave));
+  }
+
+  function CardGrupo({
+    titulo,
+    chave,
+    itens,
+    subtitulo,
+  }: {
+    titulo: string;
+    chave: string;
+    itens: Comanda[];
+    subtitulo: string;
+  }) {
+    const expandido = aberto === chave;
+    const total = itens.reduce(
+      (soma, comanda) => soma + Number(comanda.valor_total),
+      0,
+    );
+
+    return (
+      <div className="card" style={{ overflow: "hidden" }}>
+        <button
+          type="button"
+          onClick={() => toggle(chave)}
+          style={{
+            width: "100%",
+            border: 0,
+            background: "transparent",
+            padding: 20,
+            cursor: "pointer",
+            textAlign: "left",
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              gap: 14,
+            }}
+          >
+            <div>
+              <div style={{ fontWeight: 900, fontSize: 18 }}>{titulo}</div>
+              <div
+                style={{
+                  marginTop: 4,
+                  color: "var(--muted)",
+                  fontSize: 13,
+                }}
+              >
+                {subtitulo} · {itens.length} conta(s) aberta(s)
+              </div>
+            </div>
+
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 14,
+              }}
+            >
+              <b>{moeda(total)}</b>
+              {expandido ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+            </div>
+          </div>
+        </button>
+
+        {expandido && (
+          <div
+            style={{
+              borderTop: "1px solid var(--line)",
+              padding: 16,
+              display: "grid",
+              gap: 10,
+            }}
+          >
+            {itens.length === 0 ? (
+              <div
+                style={{
+                  padding: 14,
+                  color: "var(--muted)",
+                  textAlign: "center",
+                }}
+              >
+                Nenhuma conta aberta neste grupo.
+              </div>
+            ) : (
+              itens.map((comanda) => (
+                <Link
+                  key={comanda.id}
+                  href={`/comandas/${comanda.id}`}
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    gap: 12,
+                    padding: 14,
+                    border: "1px solid var(--line)",
+                    borderRadius: 12,
+                    background: "white",
+                  }}
+                >
+                  <div>
+                    <b>{comanda.nome}</b>
+                    <div
+                      style={{
+                        marginTop: 4,
+                        color: "var(--muted)",
+                        fontSize: 13,
+                      }}
+                    >
+                      {comanda.quantidade_pedidos || 0} compra(s) na comanda
+                    </div>
+                  </div>
+
+                  <div style={{ textAlign: "right" }}>
+                    <b>{moeda(comanda.valor_total)}</b>
+                    <div
+                      style={{
+                        marginTop: 4,
+                        color: "var(--orange)",
+                        fontSize: 13,
+                        fontWeight: 800,
+                      }}
+                    >
+                      Abrir conta
+                    </div>
+                  </div>
+                </Link>
+              ))
+            )}
+          </div>
+        )}
+      </div>
+    );
   }
 
   return (
     <>
       <Title
         title="Encerrar compra"
-        sub="Confira todos os itens antes de gerar o pedido no banco de dados."
+        sub="Abra a cor, encontre a pessoa e acerte a conta da comanda."
       />
 
-      <div
-        className="card"
-        style={{
-          padding: 24,
-          maxWidth: 900,
-        }}
-      >
-        {comprador ? (
-          <div
-            style={{
-              background: "#fff5ed",
-              padding: 14,
-              borderRadius: 12,
-              marginBottom: 20,
-            }}
-          >
-            <div>
-              <b>Comprador:</b> {comprador.compradorNome || "Não informado"}
-            </div>
+      {loading && <p>Carregando contas abertas...</p>}
 
-            <div style={{ marginTop: 6 }}>
-              <span className="badge">{comprador.tipoComprador}</span>
+      {erro && (
+        <div className="card" style={{ padding: 20 }}>
+          <p style={{ marginTop: 0, color: "#a22" }}>{erro}</p>
+          <button className="btn btn-soft" onClick={carregar}>
+            Tentar novamente
+          </button>
+        </div>
+      )}
 
-              {comprador.cor && (
-                <>
-                  {" "}Cor: <b>{comprador.cor}</b>
-                </>
-              )}
-            </div>
+      {!loading && !erro && (
+        <div style={{ display: "grid", gap: 24 }}>
+          <section>
+            <h2
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 9,
+                marginTop: 0,
+              }}
+            >
+              <ReceiptText size={21} />
+              Encontristas
+            </h2>
 
-            <div style={{ marginTop: 6 }}>
-              <b>Pagamento:</b>{" "}
-              {comprador.formaPagamento === "COMANDA"
-                ? "Pagar depois / Comanda"
-                : "Pagar agora"}
-            </div>
-          </div>
-        ) : (
-          <p>Nenhum comprador preparado. Volte para “Realizar venda”.</p>
-        )}
-
-        <div style={{ overflowX: "auto" }}>
-          <table
-            style={{
-              width: "100%",
-              borderCollapse: "collapse",
-            }}
-          >
-            <thead>
-              <tr
-                style={{
-                  textAlign: "left",
-                  borderBottom: "2px solid var(--line)",
-                }}
-              >
-                <th style={{ padding: 10 }}>Item</th>
-                <th>Unitário</th>
-                <th>Qtd.</th>
-                <th>Total</th>
-              </tr>
-            </thead>
-
-            <tbody>
-              {cart.map((item) => (
-                <tr
-                  key={item.id}
-                  style={{
-                    borderBottom: "1px solid var(--line)",
-                  }}
-                >
-                  <td style={{ padding: 12 }}>{item.nome}</td>
-                  <td>
-                    {item.preco.toLocaleString("pt-BR", {
-                      style: "currency",
-                      currency: "BRL",
-                    })}
-                  </td>
-                  <td>{item.quantidade}</td>
-                  <td>
-                    <b>
-                      {(item.preco * item.quantidade).toLocaleString("pt-BR", {
-                        style: "currency",
-                        currency: "BRL",
-                      })}
-                    </b>
-                  </td>
-                </tr>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
+                gap: 14,
+              }}
+            >
+              {cores.map((cor) => (
+                <CardGrupo
+                  key={cor}
+                  titulo={cor}
+                  chave={`COR-${cor}`}
+                  itens={encontristasPorCor.get(cor) || []}
+                  subtitulo="Encontristas"
+                />
               ))}
-            </tbody>
-          </table>
+            </div>
+          </section>
+
+          <section>
+            <h2
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 9,
+                marginTop: 0,
+              }}
+            >
+              <Users size={21} />
+              Servos - Sala
+            </h2>
+
+            <div style={{ maxWidth: 620 }}>
+              <CardGrupo
+                titulo="Equipe Sala"
+                chave="SERVO_SALA"
+                itens={servosSala}
+                subtitulo="Servos da sala"
+              />
+            </div>
+          </section>
         </div>
-
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            fontSize: 26,
-            fontWeight: 900,
-            marginTop: 22,
-          }}
-        >
-          <span>TOTAL</span>
-          <span>
-            {total.toLocaleString("pt-BR", {
-              style: "currency",
-              currency: "BRL",
-            })}
-          </span>
-        </div>
-
-        {msg && (
-          <div
-            style={{
-              marginTop: 16,
-              padding: 12,
-              borderRadius: 10,
-              background: "#eef9ef",
-              fontWeight: 700,
-            }}
-          >
-            {msg}
-          </div>
-        )}
-
-        <div
-          style={{
-            display: "flex",
-            gap: 10,
-            justifyContent: "flex-end",
-            marginTop: 20,
-          }}
-        >
-          <button
-            className="btn btn-soft"
-            onClick={() => router.push("/vendas")}
-          >
-            Voltar
-          </button>
-
-          <button
-            className="btn btn-primary"
-            disabled={!cart.length || !comprador || loading}
-            onClick={finalizar}
-          >
-            {loading
-              ? "Finalizando..."
-              : comprador?.formaPagamento === "COMANDA"
-                ? "Adicionar à comanda"
-                : "Finalizar venda"}
-          </button>
-        </div>
-      </div>
+      )}
     </>
   );
 }

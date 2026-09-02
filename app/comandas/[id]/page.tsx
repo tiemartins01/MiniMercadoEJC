@@ -140,7 +140,7 @@ function Content() {
 
           <button
             className="btn btn-soft"
-            onClick={() => router.push("/comandas")}
+            onClick={() => router.push("/finalizar-venda")}
           >
             Voltar
           </button>
@@ -328,7 +328,7 @@ function Content() {
       >
         <button
           className="btn btn-soft"
-          onClick={() => router.push("/comandas")}
+          onClick={() => router.push("/finalizar-venda")}
         >
           Voltar
         </button>

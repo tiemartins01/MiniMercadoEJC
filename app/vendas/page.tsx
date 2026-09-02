@@ -4,13 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Plus, ShoppingCart, Trash2 } from "lucide-react";
 import Guard from "@/components/Guard";
 import Title from "@/components/Title";
-import type {
-  CartItem,
-  Pessoa,
-  Produto,
-  TipoPagamento,
-  TipoPessoa,
-} from "@/lib/types";
+import type { CartItem, Pessoa, Produto, TipoPessoa } from "@/lib/types";
 
 const cores = [
   "AZUL",
@@ -26,13 +20,12 @@ function Content() {
   const [cor, setCor] = useState("");
   const [pessoas, setPessoas] = useState<Pessoa[]>([]);
   const [pessoaId, setPessoaId] = useState("");
-  const [pagamento, setPagamento] = useState<TipoPagamento>("PAGO");
-
   const [produtos, setProdutos] = useState<Produto[]>([]);
   const [produtoId, setProdutoId] = useState("");
   const [qtd, setQtd] = useState(1);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [msg, setMsg] = useState("");
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     fetch("/api/produtos")
@@ -44,6 +37,9 @@ function Content() {
     if (savedCart) {
       setCart(JSON.parse(savedCart));
     }
+
+    // Remove o fluxo antigo de encerramento pelo localStorage.
+    localStorage.removeItem("ejc-comprador");
   }, []);
 
   useEffect(() => {
@@ -52,7 +48,6 @@ function Content() {
     if (tipo === "SERVO_PADRAO") {
       setPessoas([]);
       setCor("");
-      setPagamento("PAGO");
       return;
     }
 
@@ -60,9 +55,14 @@ function Content() {
       setCor("");
     }
 
+    if (tipo === "ENCONTRISTA" && !cor) {
+      setPessoas([]);
+      return;
+    }
+
     const query = new URLSearchParams({ tipo });
 
-    if (tipo === "ENCONTRISTA" && cor) {
+    if (tipo === "ENCONTRISTA") {
       query.set("cor", cor);
     }
 
@@ -77,6 +77,8 @@ function Content() {
   }
 
   function add() {
+    setMsg("");
+
     const produto = produtos.find(
       (item) => String(item.id) === produtoId,
     );
@@ -113,6 +115,7 @@ function Content() {
 
     persist(next);
     setQtd(1);
+    setProdutoId("");
     setMsg("Item adicionado ao carrinho.");
   }
 
@@ -125,13 +128,13 @@ function Content() {
     [cart],
   );
 
-  function salvarComprador() {
+  async function concluirCompra() {
     const pessoa = pessoas.find(
       (item) => String(item.id) === pessoaId,
     );
 
-    if (tipo !== "SERVO_PADRAO" && !pessoa) {
-      setMsg("Selecione uma pessoa antes de continuar.");
+    if (!cart.length) {
+      setMsg("Adicione pelo menos um item ao carrinho.");
       return;
     }
 
@@ -140,31 +143,63 @@ function Content() {
       return;
     }
 
-    const formaPagamento: TipoPagamento =
-      tipo === "SERVO_PADRAO" ? "PAGO" : pagamento;
+    if (tipo !== "SERVO_PADRAO" && !pessoa) {
+      setMsg("Selecione a pessoa que está realizando a compra.");
+      return;
+    }
 
-    localStorage.setItem(
-      "ejc-comprador",
-      JSON.stringify({
-        tipoComprador: tipo,
-        cor: tipo === "ENCONTRISTA" ? cor : null,
-        pessoaId:
-          tipo !== "SERVO_PADRAO" && pessoa
-            ? Number(pessoa.id)
-            : null,
-        compradorNome:
-          tipo === "SERVO_PADRAO"
-            ? "Servo padrão"
-            : pessoa?.nome || null,
-        formaPagamento,
-      }),
-    );
+    setLoading(true);
+    setMsg("");
 
-    setMsg(
-      formaPagamento === "COMANDA"
-        ? "Compra preparada para ser adicionada à comanda."
-        : "Comprador e carrinho preparados para finalizar a venda.",
-    );
+    try {
+      const response = await fetch("/api/vendas", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          tipoComprador: tipo,
+          pessoaId: pessoa ? Number(pessoa.id) : null,
+          compradorNome:
+            tipo === "SERVO_PADRAO" ? "Servo padrão" : pessoa?.nome || null,
+          cor: tipo === "ENCONTRISTA" ? cor : null,
+          formaPagamento: tipo === "SERVO_PADRAO" ? "PAGO" : "COMANDA",
+          itens: cart.map((item) => ({
+            produtoId: item.id,
+            quantidade: item.quantidade,
+          })),
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setMsg(data.error || "Falha ao concluir a compra.");
+        return;
+      }
+
+      localStorage.removeItem("ejc-cart");
+      setCart([]);
+      setProdutoId("");
+      setQtd(1);
+
+      const valor = Number(data.total).toLocaleString("pt-BR", {
+        style: "currency",
+        currency: "BRL",
+      });
+
+      if (tipo === "SERVO_PADRAO") {
+        setMsg(`Conta fechada com sucesso — ${valor}.`);
+      } else {
+        setMsg(
+          `Compra adicionada à comanda de ${pessoa?.nome} — ${valor}. Para receber o pagamento, use “Encerrar compra”.`,
+        );
+      }
+    } catch {
+      setMsg("Não foi possível concluir a compra.");
+    } finally {
+      setLoading(false);
+    }
   }
 
   const pessoaObrigatoria = tipo !== "SERVO_PADRAO";
@@ -174,7 +209,7 @@ function Content() {
     <>
       <Title
         title="Realizar venda"
-        sub="Escolha o comprador, os itens e monte o carrinho."
+        sub="Escolha o comprador, adicione os itens e conclua a compra."
       />
 
       <div
@@ -184,12 +219,7 @@ function Content() {
           gap: 18,
         }}
       >
-        <div
-          className="card"
-          style={{
-            padding: 22,
-          }}
-        >
+        <div className="card" style={{ padding: 22 }}>
           <h2 style={{ marginTop: 0 }}>Comprador</h2>
 
           <div
@@ -222,7 +252,10 @@ function Content() {
                 <select
                   className="input"
                   value={cor}
-                  onChange={(event) => setCor(event.target.value)}
+                  onChange={(event) => {
+                    setCor(event.target.value);
+                    setMsg("");
+                  }}
                 >
                   <option value="">Selecione a cor...</option>
 
@@ -237,56 +270,29 @@ function Content() {
           </div>
 
           {tipo !== "SERVO_PADRAO" && (
-            <label
-              style={{
-                display: "block",
-                marginTop: 12,
-              }}
-            >
+            <label style={{ display: "block", marginTop: 12 }}>
               {tipo === "ENCONTRISTA" ? "Encontrista" : "Servo - Sala"}
 
               <select
                 className="input"
                 value={pessoaId}
-                onChange={(event) => setPessoaId(event.target.value)}
+                onChange={(event) => {
+                  setPessoaId(event.target.value);
+                  setMsg("");
+                }}
               >
                 <option value="">Selecione...</option>
 
                 {pessoas.map((pessoa) => (
                   <option key={pessoa.id} value={pessoa.id}>
                     {pessoa.nome}
-                    {pessoa.cor ? ` — ${pessoa.cor}` : ""}
                   </option>
                 ))}
               </select>
             </label>
           )}
 
-          {tipo !== "SERVO_PADRAO" && (
-            <label
-              style={{
-                display: "block",
-                marginTop: 12,
-              }}
-            >
-              Pagamento
-
-              <select
-                className="input"
-                value={pagamento}
-                onChange={(event) =>
-                  setPagamento(event.target.value as TipoPagamento)
-                }
-              >
-                <option value="PAGO">Pagar agora</option>
-                <option value="COMANDA">
-                  Pagar depois / adicionar à comanda
-                </option>
-              </select>
-            </label>
-          )}
-
-          {tipo === "SERVO_PADRAO" && (
+          {tipo === "SERVO_PADRAO" ? (
             <div
               style={{
                 marginTop: 14,
@@ -297,8 +303,22 @@ function Content() {
                 fontWeight: 700,
               }}
             >
-              Servo padrão não utiliza comanda. O pagamento deve ser feito no
-              momento da venda.
+              Servo padrão paga na hora. Depois de adicionar todos os itens,
+              clique em “Fechar conta”.
+            </div>
+          ) : (
+            <div
+              style={{
+                marginTop: 14,
+                padding: 12,
+                borderRadius: 12,
+                background: "#fff5ed",
+                color: "#8f3d08",
+                fontWeight: 700,
+              }}
+            >
+              Esta compra será adicionada à comanda. O pagamento será feito em
+              “Encerrar compra”.
             </div>
           )}
 
@@ -357,34 +377,16 @@ function Content() {
             </label>
 
             <button className="btn btn-primary" onClick={add}>
-              <Plus
-                size={17}
-                style={{
-                  verticalAlign: "middle",
-                }}
-              />{" "}
-              Adicionar
+              <Plus size={17} style={{ verticalAlign: "middle" }} /> Adicionar
             </button>
           </div>
 
           {msg && (
-            <p
-              style={{
-                color: "var(--orange)",
-                fontWeight: 700,
-              }}
-            >
-              {msg}
-            </p>
+            <p style={{ color: "var(--orange)", fontWeight: 700 }}>{msg}</p>
           )}
         </div>
 
-        <div
-          className="card"
-          style={{
-            padding: 22,
-          }}
-        >
+        <div className="card" style={{ padding: 22 }}>
           <h2
             style={{
               display: "flex",
@@ -398,9 +400,7 @@ function Content() {
           </h2>
 
           {cart.length === 0 ? (
-            <p style={{ color: "var(--muted)" }}>
-              Nenhum item adicionado.
-            </p>
+            <p style={{ color: "var(--muted)" }}>Nenhum item adicionado.</p>
           ) : (
             cart.map((item) => (
               <div
@@ -416,12 +416,7 @@ function Content() {
               >
                 <div>
                   <b>{item.nome}</b>
-                  <div
-                    style={{
-                      fontSize: 13,
-                      color: "var(--muted)",
-                    }}
-                  >
+                  <div style={{ fontSize: 13, color: "var(--muted)" }}>
                     {item.quantidade} ×{" "}
                     {item.preco.toLocaleString("pt-BR", {
                       style: "currency",
@@ -474,18 +469,20 @@ function Content() {
 
           <button
             className="btn btn-dark"
-            style={{
-              width: "100%",
-              marginTop: 18,
-            }}
+            style={{ width: "100%", marginTop: 18 }}
             disabled={
+              loading ||
               !cart.length ||
               (pessoaObrigatoria && !pessoaId) ||
               (corObrigatoria && !cor)
             }
-            onClick={salvarComprador}
+            onClick={concluirCompra}
           >
-            Preparar encerramento
+            {loading
+              ? "Salvando..."
+              : tipo === "SERVO_PADRAO"
+                ? "Fechar conta"
+                : "Adicionar à comanda"}
           </button>
         </div>
       </div>

@@ -61,26 +61,11 @@ export async function POST(req: Request) {
     );
   }
 
+  // Regra atual de pagamento:
+  // - Servo padrão paga no momento da venda.
+  // - Encontrista e Servo Sala entram sempre em comanda.
   const formaPagamento: TipoPagamento =
-    body.tipoComprador === "SERVO_PADRAO"
-      ? "PAGO"
-      : body.formaPagamento === "COMANDA"
-        ? "COMANDA"
-        : "PAGO";
-
-  if (
-    body.tipoComprador === "SERVO_PADRAO" &&
-    body.formaPagamento === "COMANDA"
-  ) {
-    return NextResponse.json(
-      {
-        error: "Servo padrão não pode utilizar comanda.",
-      },
-      {
-        status: 400,
-      },
-    );
-  }
+    body.tipoComprador === "SERVO_PADRAO" ? "PAGO" : "COMANDA";
 
   if (body.tipoComprador !== "SERVO_PADRAO" && !body.pessoaId) {
     return NextResponse.json(

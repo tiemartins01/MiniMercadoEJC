@@ -5,7 +5,6 @@ import { usePathname, useRouter } from "next/navigation";
 import {
   BarChart3,
   Boxes,
-  ClipboardList,
   LayoutDashboard,
   LogOut,
   PackageOpen,
@@ -27,7 +26,6 @@ export default function AppShell({
   const items = [
     ["/painel", "Painel", LayoutDashboard],
     ["/vendas", "Realizar venda", ShoppingCart],
-    ["/comandas", "Comandas", ClipboardList],
     ["/finalizar-venda", "Encerrar compra", ReceiptText],
     ["/estoque", "Estoque", PackageOpen],
     ...(admin
