@@ -1,0 +1,7 @@
+@import "tailwindcss";
+:root{--orange:#f47a20;--ink:#17120e;--paper:#fffaf6;--cream:#f7eee7;--line:#ead9cc;--muted:#76685f}
+*{box-sizing:border-box} body{margin:0;background:var(--paper);color:var(--ink);font-family:Arial,Helvetica,sans-serif} button,input,select,textarea{font:inherit}
+a{text-decoration:none;color:inherit}.card{background:#fff;border:1px solid var(--line);border-radius:18px;box-shadow:0 8px 28px rgba(74,36,12,.06)}
+.input{width:100%;border:1px solid #dfcec1;border-radius:12px;padding:11px 12px;background:white;outline:none}.input:focus{border-color:var(--orange);box-shadow:0 0 0 3px rgba(244,122,32,.12)}
+.btn{border:0;border-radius:12px;padding:11px 16px;font-weight:800;cursor:pointer}.btn-primary{background:var(--orange);color:white}.btn-dark{background:#1b1714;color:white}.btn-soft{background:#fff1e7;color:#b64c07}.btn:disabled{opacity:.5;cursor:not-allowed}
+.badge{display:inline-flex;padding:5px 9px;border-radius:999px;font-size:12px;font-weight:800;background:#fff0e5;color:#b84f0b}.grid-cards{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px}@media(max-width:900px){.grid-cards{grid-template-columns:1fr 1fr}}@media(max-width:600px){.grid-cards{grid-template-columns:1fr}}
