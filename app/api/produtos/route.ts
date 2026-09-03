@@ -1,2 +1,51 @@
-import { NextResponse } from "next/server"; import { connectionString,getDb,setup } from "@/lib/db"; import { currentRole } from "@/lib/auth";
-export async function GET(){if(!(await currentRole()))return NextResponse.json({error:'Não autorizado'},{status:401});if(!connectionString())return NextResponse.json({produtos:[]});const sql=getDb();try{await setup(sql);const rows=await sql`SELECT id,nome,descricao,preco::float,estoque,ativo FROM venda_produtos ORDER BY nome`;return NextResponse.json({produtos:rows})}finally{await sql.end()}}
+import { NextResponse } from "next/server";
+
+import { currentRole } from "@/lib/auth";
+import {
+  connectionString,
+  getDb,
+  setup,
+} from "@/lib/db";
+
+export async function GET() {
+  if (!(await currentRole())) {
+    return NextResponse.json(
+      {
+        error: "Não autorizado",
+      },
+      {
+        status: 401,
+      },
+    );
+  }
+
+  if (!connectionString()) {
+    return NextResponse.json({
+      produtos: [],
+    });
+  }
+
+  const sql = getDb();
+
+  try {
+    await setup(sql);
+
+    const rows = await sql`
+      SELECT
+        id,
+        nome,
+        descricao,
+        preco::float,
+        estoque,
+        ativo
+      FROM venda_produtos
+      ORDER BY nome
+    `;
+
+    return NextResponse.json({
+      produtos: rows,
+    });
+  } finally {
+    await sql.end();
+  }
+}

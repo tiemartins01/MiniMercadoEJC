@@ -345,7 +345,7 @@ function Content() {
                 .filter((produto) => produto.ativo && produto.estoque > 0)
                 .map((produto) => (
                   <option key={produto.id} value={produto.id}>
-                    {produto.nome} — {produto.estoque} un. —{" "}
+                    {produto.nome}—{" "}
                     {produto.preco.toLocaleString("pt-BR", {
                       style: "currency",
                       currency: "BRL",

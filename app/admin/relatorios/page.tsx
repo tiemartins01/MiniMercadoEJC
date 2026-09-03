@@ -1,3 +1,280 @@
 "use client";
-import { useEffect,useMemo,useState } from "react"; import Guard from "@/components/Guard"; import Title from "@/components/Title";
-function Content(){const [pedidos,setPedidos]=useState<any[]>([]),[dia,setDia]=useState<'SABADO'|'DOMINGO'|'TODOS'>('TODOS');useEffect(()=>{fetch('/api/admin/relatorios').then(r=>r.json()).then(d=>setPedidos(d.pedidos||[]))},[]);const filtered=useMemo(()=>pedidos.filter(p=>{if(dia==='TODOS')return true;const d=new Date(p.criado_em).getDay();return dia==='SABADO'?d===6:d===0}),[pedidos,dia]);const itens=useMemo(()=>{const m=new Map<string,{q:number,total:number}>();for(const p of filtered)for(const i of p.itens||[]){const x=m.get(i.produto)||{q:0,total:0};x.q+=Number(i.quantidade);x.total+=Number(i.total);m.set(i.produto,x)}return [...m.entries()]},[filtered]);const bruto=filtered.reduce((s,p)=>s+Number(p.valor_bruto),0),ret=filtered.reduce((s,p)=>s+Number(p.valor_retornado),0),liq=filtered.reduce((s,p)=>s+Number(p.valor_liquido),0);return <><Title title="Relatórios" sub="Resumo das vendas por sábado, domingo ou evento completo."/><div style={{display:'flex',gap:8,marginBottom:18}}>{(['SABADO','DOMINGO','TODOS'] as const).map(x=><button key={x} className={'btn '+(dia===x?'btn-primary':'btn-soft')} onClick={()=>setDia(x)}>{x==='SABADO'?'Sábado':x==='DOMINGO'?'Domingo':'Evento completo'}</button>)}</div><div className="grid-cards" style={{marginBottom:18}}><Card l="Vendas brutas" v={money(bruto)}/><Card l="Retornos" v={'- '+money(ret)}/><Card l="Total líquido" v={money(liq)}/><Card l="Pedidos" v={filtered.length}/></div><div className="card" style={{padding:22}}><h2 style={{marginTop:0}}>Itens vendidos</h2><table style={{width:'100%',borderCollapse:'collapse'}}><thead><tr style={{textAlign:'left',borderBottom:'2px solid var(--line)'}}><th style={{padding:10}}>Produto</th><th>Quantidade</th><th>Total bruto dos itens</th></tr></thead><tbody>{itens.map(([nome,x])=><tr key={nome} style={{borderBottom:'1px solid var(--line)'}}><td style={{padding:11}}>{nome}</td><td>{x.q}</td><td>{money(x.total)}</td></tr>)}</tbody></table></div><div className="card" style={{padding:22,marginTop:18}}><h2 style={{marginTop:0}}>Pedidos</h2>{filtered.map(p=><div key={p.id} style={{display:'grid',gridTemplateColumns:'100px 1fr auto',gap:12,padding:'12px 0',borderBottom:'1px solid var(--line)'}}><b>#{p.id}</b><div>{new Date(p.criado_em).toLocaleString('pt-BR')} — {p.comprador_nome||p.tipo_comprador}</div><b>{money(Number(p.valor_liquido))}</b></div>)}</div></>};function money(v:number){return v.toLocaleString('pt-BR',{style:'currency',currency:'BRL'})}function Card({l,v}:{l:string;v:any}){return <div className="card" style={{padding:20}}><div style={{color:'var(--muted)',fontWeight:700}}>{l}</div><div style={{fontSize:25,fontWeight:900,marginTop:8}}>{v}</div></div>}export default function Page(){return <Guard adminOnly><Content/></Guard>}
+
+import { useEffect, useMemo, useState } from "react";
+
+import Guard from "@/components/Guard";
+import Title from "@/components/Title";
+
+function Content() {
+  const [pedidos, setPedidos] = useState<any[]>([]);
+  const [dia, setDia] = useState<"SABADO" | "DOMINGO" | "TODOS">("TODOS");
+
+  useEffect(() => {
+    fetch("/api/admin/relatorios")
+      .then((r) => r.json())
+      .then((d) => setPedidos(d.pedidos || []));
+  }, []);
+
+  const filtered = useMemo(() => {
+    return pedidos.filter((p) => {
+      if (dia === "TODOS") {
+        return true;
+      }
+
+      const d = new Date(p.criado_em).getDay();
+
+      return dia === "SABADO" ? d === 6 : d === 0;
+    });
+  }, [pedidos, dia]);
+
+  const itens = useMemo(() => {
+    const m = new Map<
+      string,
+      {
+        q: number;
+        total: number;
+      }
+    >();
+
+    for (const p of filtered) {
+      for (const i of p.itens || []) {
+        const x = m.get(i.produto) || {
+          q: 0,
+          total: 0,
+        };
+
+        x.q += Number(i.quantidade);
+        x.total += Number(i.total);
+
+        m.set(i.produto, x);
+      }
+    }
+
+    return [...m.entries()];
+  }, [filtered]);
+
+  const bruto = filtered.reduce(
+    (s, p) => s + Number(p.valor_bruto),
+    0,
+  );
+
+  const ret = filtered.reduce(
+    (s, p) => s + Number(p.valor_retornado),
+    0,
+  );
+
+  const liq = filtered.reduce(
+    (s, p) => s + Number(p.valor_liquido),
+    0,
+  );
+
+  return (
+    <>
+      <Title
+        title="Relatórios"
+        sub="Resumo das vendas por sábado, domingo ou evento completo."
+      />
+
+      <div
+        style={{
+          display: "flex",
+          gap: 8,
+          marginBottom: 18,
+        }}
+      >
+        {(["SABADO", "DOMINGO", "TODOS"] as const).map((x) => (
+          <button
+            key={x}
+            className={
+              "btn " + (dia === x ? "btn-primary" : "btn-soft")
+            }
+            onClick={() => setDia(x)}
+          >
+            {x === "SABADO"
+              ? "Sábado"
+              : x === "DOMINGO"
+                ? "Domingo"
+                : "Evento completo"}
+          </button>
+        ))}
+      </div>
+
+      <div
+        className="grid-cards"
+        style={{
+          marginBottom: 18,
+        }}
+      >
+        <Card
+          l="Vendas brutas"
+          v={money(bruto)}
+        />
+
+        <Card
+          l="Retornos"
+          v={"- " + money(ret)}
+        />
+
+        <Card
+          l="Total líquido"
+          v={money(liq)}
+        />
+
+        <Card
+          l="Pedidos"
+          v={filtered.length}
+        />
+      </div>
+
+      <div
+        className="card"
+        style={{
+          padding: 22,
+        }}
+      >
+        <h2
+          style={{
+            marginTop: 0,
+          }}
+        >
+          Itens vendidos
+        </h2>
+
+        <table
+          style={{
+            width: "100%",
+            borderCollapse: "collapse",
+          }}
+        >
+          <thead>
+            <tr
+              style={{
+                textAlign: "left",
+                borderBottom: "2px solid var(--line)",
+              }}
+            >
+              <th style={{ padding: 10 }}>Produto</th>
+              <th>Quantidade</th>
+              <th>Total bruto dos itens</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            {itens.map(([nome, x]) => (
+              <tr
+                key={nome}
+                style={{
+                  borderBottom: "1px solid var(--line)",
+                }}
+              >
+                <td style={{ padding: 11 }}>
+                  {nome}
+                </td>
+
+                <td>
+                  {x.q}
+                </td>
+
+                <td>
+                  {money(x.total)}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <div
+        className="card"
+        style={{
+          padding: 22,
+          marginTop: 18,
+        }}
+      >
+        <h2
+          style={{
+            marginTop: 0,
+          }}
+        >
+          Pedidos
+        </h2>
+
+        {filtered.map((p) => (
+          <div
+            key={p.id}
+            style={{
+              display: "grid",
+              gridTemplateColumns: "100px 1fr auto",
+              gap: 12,
+              padding: "12px 0",
+              borderBottom: "1px solid var(--line)",
+            }}
+          >
+            <b>#{p.id}</b>
+
+            <div>
+              {new Date(p.criado_em).toLocaleString("pt-BR")}
+              {" — "}
+              {p.comprador_nome || p.tipo_comprador}
+            </div>
+
+            <b>
+              {money(Number(p.valor_liquido))}
+            </b>
+          </div>
+        ))}
+      </div>
+    </>
+  );
+}
+
+function money(v: number) {
+  return v.toLocaleString("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  });
+}
+
+function Card({
+  l,
+  v,
+}: {
+  l: string;
+  v: any;
+}) {
+  return (
+    <div
+      className="card"
+      style={{
+        padding: 20,
+      }}
+    >
+      <div
+        style={{
+          color: "var(--muted)",
+          fontWeight: 700,
+        }}
+      >
+        {l}
+      </div>
+
+      <div
+        style={{
+          fontSize: 25,
+          fontWeight: 900,
+          marginTop: 8,
+        }}
+      >
+        {v}
+      </div>
+    </div>
+  );
+}
+
+export default function Page() {
+  return (
+    <Guard adminOnly>
+      <Content />
+    </Guard>
+  );
+}

@@ -1,2 +1,53 @@
-import { NextResponse } from "next/server"; import { makeSession, sessionCookieName } from "@/lib/auth";
-export async function POST(req:Request){const {login,senha}=await req.json(); const opLogin=process.env.OPERADOR_LOGIN||'operador',opSenha=process.env.OPERADOR_SENHA||'ejc2026',adLogin=process.env.ADMIN_LOGIN||'admin',adSenha=process.env.ADMIN_SENHA||'admin2026'; const role=login===adLogin&&senha===adSenha?'ADMIN':login===opLogin&&senha===opSenha?'OPERADOR':null;if(!role)return NextResponse.json({error:'Login ou senha inválidos'},{status:401}); const res=NextResponse.json({ok:true,role});res.cookies.set(sessionCookieName,makeSession(role),{httpOnly:true,sameSite:'lax',secure:process.env.NODE_ENV==='production',path:'/',maxAge:60*60*18});return res}
+import { NextResponse } from "next/server";
+
+import {
+  makeSession,
+  sessionCookieName,
+} from "@/lib/auth";
+
+export async function POST(req: Request) {
+  const { login, senha } = await req.json();
+
+  const opLogin = process.env.OPERADOR_LOGIN || "operador";
+  const opSenha = process.env.OPERADOR_SENHA || "ejc2026";
+
+  const adLogin = process.env.ADMIN_LOGIN || "admin";
+  const adSenha = process.env.ADMIN_SENHA || "admin2026";
+
+  const role =
+    login === adLogin && senha === adSenha
+      ? "ADMIN"
+      : login === opLogin && senha === opSenha
+        ? "OPERADOR"
+        : null;
+
+  if (!role) {
+    return NextResponse.json(
+      {
+        error: "Login ou senha inválidos",
+      },
+      {
+        status: 401,
+      },
+    );
+  }
+
+  const res = NextResponse.json({
+    ok: true,
+    role,
+  });
+
+  res.cookies.set(
+    sessionCookieName,
+    makeSession(role),
+    {
+      httpOnly: true,
+      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
+      path: "/",
+      maxAge: 60 * 60 * 18,
+    },
+  );
+
+  return res;
+}

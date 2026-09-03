@@ -1,3 +1,214 @@
 "use client";
-import { useEffect,useState } from "react"; import Guard from "@/components/Guard"; import Title from "@/components/Title"; import { Boxes, PackageCheck, ReceiptText } from "lucide-react";
-function Content(){const [d,setD]=useState<any>({vendidos:0,total_itens:0,estoque:0,pedidos:0});useEffect(()=>{fetch('/api/dashboard').then(r=>r.json()).then(setD)},[]);const max=Math.max(Number(d.total_itens||0),1),pct=Math.min(100,Math.round(Number(d.vendidos||0)/max*100));return <><Title title="Painel" sub="Acompanhe o ritmo das vendas e o estoque disponível."/><div className="card" style={{padding:24,marginBottom:18}}><div style={{display:'flex',justifyContent:'space-between',gap:20,alignItems:'end'}}><div><div style={{color:'var(--muted)',fontWeight:700}}>Itens vendidos</div><div style={{fontSize:38,fontWeight:900,marginTop:4}}>{d.vendidos||0} <span style={{fontSize:22,color:'#8a7668'}}>/ {d.total_itens||0}</span></div></div><b style={{fontSize:22,color:'var(--orange)'}}>{pct}%</b></div><div style={{height:16,borderRadius:999,background:'#f1e4db',overflow:'hidden',marginTop:16}}><div style={{width:`${pct}%`,height:'100%',background:'var(--orange)',borderRadius:999}}/></div></div><div className="grid-cards"><Card icon={<ReceiptText/>} label="Pedidos encerrados" value={d.pedidos||0}/><Card icon={<Boxes/>} label="Itens em estoque" value={d.estoque||0}/><Card icon={<PackageCheck/>} label="Total movimentado" value={(Number(d.vendidos||0)+Number(d.estoque||0))}/>{d.valor!==null&&d.valor!==undefined&&<Card icon={<ReceiptText/>} label="Valor líquido" value={Number(d.valor).toLocaleString('pt-BR',{style:'currency',currency:'BRL'})}/>}</div></>};function Card({icon,label,value}:{icon:React.ReactNode;label:string;value:any}){return <div className="card" style={{padding:20}}><div style={{color:'var(--orange)'}}>{icon}</div><div style={{fontSize:26,fontWeight:900,marginTop:14}}>{value}</div><div style={{color:'var(--muted)',marginTop:3}}>{label}</div></div>}export default function Page(){return <Guard><Content/></Guard>}
+
+import { useEffect, useState } from "react";
+
+import Guard from "@/components/Guard";
+import Title from "@/components/Title";
+
+import {
+  Boxes,
+  PackageCheck,
+  ReceiptText,
+} from "lucide-react";
+
+function Content() {
+  const [d, setD] = useState<any>({
+    vendidos: 0,
+    total_itens: 0,
+    estoque: 0,
+    pedidos: 0,
+  });
+
+  useEffect(() => {
+    fetch("/api/dashboard")
+      .then((r) => r.json())
+      .then(setD);
+  }, []);
+
+  const max = Math.max(
+    Number(d.total_itens || 0),
+    1,
+  );
+
+  const pct = Math.min(
+    100,
+    Math.round(
+      (Number(d.vendidos || 0) / max) * 100,
+    ),
+  );
+
+  return (
+    <>
+      <Title
+        title="Painel"
+        sub="Acompanhe o ritmo das vendas e o estoque disponível."
+      />
+
+      <div
+        className="card"
+        style={{
+          padding: 24,
+          marginBottom: 18,
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            gap: 20,
+            alignItems: "end",
+          }}
+        >
+          <div>
+            <div
+              style={{
+                color: "var(--muted)",
+                fontWeight: 700,
+              }}
+            >
+              Itens vendidos
+            </div>
+
+            <div
+              style={{
+                fontSize: 38,
+                fontWeight: 900,
+                marginTop: 4,
+              }}
+            >
+              {d.vendidos || 0}{" "}
+              <span
+                style={{
+                  fontSize: 22,
+                  color: "#8a7668",
+                }}
+              >
+                / {d.total_itens || 0}
+              </span>
+            </div>
+          </div>
+
+          <b
+            style={{
+              fontSize: 22,
+              color: "var(--orange)",
+            }}
+          >
+            {pct}%
+          </b>
+        </div>
+
+        <div
+          style={{
+            height: 16,
+            borderRadius: 999,
+            background: "#f1e4db",
+            overflow: "hidden",
+            marginTop: 16,
+          }}
+        >
+          <div
+            style={{
+              width: `${pct}%`,
+              height: "100%",
+              background: "var(--orange)",
+              borderRadius: 999,
+            }}
+          />
+        </div>
+      </div>
+
+      <div className="grid-cards">
+        <Card
+          icon={<ReceiptText />}
+          label="Pedidos encerrados"
+          value={d.pedidos || 0}
+        />
+
+        <Card
+          icon={<Boxes />}
+          label="Itens em estoque"
+          value={d.estoque || 0}
+        />
+
+        <Card
+          icon={<PackageCheck />}
+          label="Total movimentado"
+          value={
+            Number(d.vendidos || 0) +
+            Number(d.estoque || 0)
+          }
+        />
+
+        {d.valor !== null &&
+          d.valor !== undefined && (
+            <Card
+              icon={<ReceiptText />}
+              label="Valor líquido"
+              value={Number(d.valor).toLocaleString(
+                "pt-BR",
+                {
+                  style: "currency",
+                  currency: "BRL",
+                },
+              )}
+            />
+          )}
+      </div>
+    </>
+  );
+}
+
+function Card({
+  icon,
+  label,
+  value,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: any;
+}) {
+  return (
+    <div
+      className="card"
+      style={{
+        padding: 20,
+      }}
+    >
+      <div
+        style={{
+          color: "var(--orange)",
+        }}
+      >
+        {icon}
+      </div>
+
+      <div
+        style={{
+          fontSize: 26,
+          fontWeight: 900,
+          marginTop: 14,
+        }}
+      >
+        {value}
+      </div>
+
+      <div
+        style={{
+          color: "var(--muted)",
+          marginTop: 3,
+        }}
+      >
+        {label}
+      </div>
+    </div>
+  );
+}
+
+export default function Page() {
+  return (
+    <Guard>
+      <Content />
+    </Guard>
+  );
+}
