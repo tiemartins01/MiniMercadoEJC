@@ -4,15 +4,31 @@ import { cookies } from "next/headers";
 import { getDb } from "@/lib/db";
 import type { Role } from "@/lib/types";
 
-const COOKIE = "ebs_session";
+const COOKIE =
+  process.env.NODE_ENV === "production"
+    ? "__Host-ebs_session"
+    : "ebs_session";
 
-const SESSION_MAX_AGE_SECONDS = 60 * 60 * 12;
+const SESSION_MAX_AGE_SECONDS =
+  60 * 60 * 12;
+
+export const sessionCookieOptions = {
+  httpOnly: true,
+  sameSite: "strict" as const,
+  secure:
+    process.env.NODE_ENV === "production",
+  path: "/",
+};
 
 export function createSessionToken() {
-  return crypto.randomBytes(32).toString("base64url");
+  return crypto
+    .randomBytes(32)
+    .toString("base64url");
 }
 
-export function hashSessionToken(token: string) {
+export function hashSessionToken(
+  token: string,
+) {
   return crypto
     .createHash("sha256")
     .update(token)
@@ -22,13 +38,23 @@ export function hashSessionToken(token: string) {
 export async function currentUser() {
   const cookieStore = await cookies();
 
-  const token = cookieStore.get(COOKIE)?.value;
+  const token =
+    cookieStore.get(COOKIE)?.value;
 
   if (!token) {
     return null;
   }
 
-  const tokenHash = hashSessionToken(token);
+  // Impede cookies absurdamente grandes ou inválidos.
+  if (
+    token.length < 40 ||
+    token.length > 100
+  ) {
+    return null;
+  }
+
+  const tokenHash =
+    hashSessionToken(token);
 
   const db = getDb();
 
@@ -51,6 +77,13 @@ export async function currentUser() {
   const user = rows[0];
 
   if (!user) {
+    return null;
+  }
+
+  if (
+    user.role !== "ADMIN" &&
+    user.role !== "OPERADOR"
+  ) {
     return null;
   }
 
