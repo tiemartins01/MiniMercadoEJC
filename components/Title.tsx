@@ -1,0 +1,1 @@
+export default function Title({title,sub}:{title:string;sub:string}){return <div style={{marginBottom:25}}><div className="badge">MINI MERCADO EJC</div><h1 style={{fontSize:34,margin:'10px 0 5px'}}>{title}</h1><p style={{margin:0,color:'var(--muted)'}}>{sub}</p></div>}
