@@ -19,6 +19,8 @@ import {
   sessionMaxAgeSeconds,
 } from "@/lib/auth";
 
+// Trava os dados para manter um padrão minimo
+
 const loginSchema = z.object({
   login: z
     .string()

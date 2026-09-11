@@ -3,7 +3,6 @@ import crypto from "crypto";
 import { getDb } from "@/lib/db";
 
 const LIMITE_TENTATIVAS = 5;
-const JANELA_MINUTOS = 15;
 const BLOQUEIO_MINUTOS = 15;
 
 function criarChave(

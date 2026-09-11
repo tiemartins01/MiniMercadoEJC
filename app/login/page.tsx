@@ -12,10 +12,10 @@ export default function Login(){
 
     const r = useRouter();
 
-
     useEffect(() => {
     let active = true;
 
+    // Verifica se tem algum cookie válido para não fazer novamente o login.
     fetch("/api/auth/me", { cache: "no-store" }) // no-store para não guardar resposta no cache
       .then(async (res) => {
         if (!res.ok) return null;

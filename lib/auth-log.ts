@@ -2,6 +2,8 @@ import crypto from "crypto";
 
 import { getDb } from "@/lib/db";
 
+// ADICIONA OS EVENTOS
+
 export type EventoAuth =
   | "LOGIN_SUCESSO"
   | "LOGIN_FALHA"
@@ -24,6 +26,8 @@ function getLogSecret() {
     "AUTH_LOG_SECRET não configurada em produção.",
   );
 }
+
+// Transforma infomração em hash.
 
 function hashDado(valor: string) {
   return crypto
@@ -54,7 +58,7 @@ export async function registrarLogAuth({
   const loginHash = login
     ? hashDado(login.toLowerCase())
     : null;
-
+// Inserindo registro de sessão
   await db`
     INSERT INTO logs_autenticacao (
       usuario_id,

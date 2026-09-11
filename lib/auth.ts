@@ -1,6 +1,5 @@
 import crypto from "crypto";
 import { cookies } from "next/headers";
-
 import { getDb } from "@/lib/db";
 import type { Role } from "@/lib/types";
 
@@ -26,6 +25,7 @@ export function createSessionToken() {
     .toString("base64url");
 }
 
+// Cria hash do token
 export function hashSessionToken(
   token: string,
 ) {
@@ -35,6 +35,7 @@ export function hashSessionToken(
     .digest("hex");
 }
 
+// Pega informações do usuário que vai/está logado
 export async function currentUser() {
   const cookieStore = await cookies();
 
@@ -45,7 +46,7 @@ export async function currentUser() {
     return null;
   }
 
-  // Impede cookies absurdamente grandes ou inválidos.
+  // Impede cookies grandes ou inválidos.
   if (
     token.length < 40 ||
     token.length > 100
@@ -58,6 +59,7 @@ export async function currentUser() {
 
   const db = getDb();
 
+  // RETORNA USUÁRIO COM SESSÃO ABERTA SEM ESTÁ EXPIRADA, REVOGADA OU INATIVA.
   const rows = await db`
     SELECT
       u.id,
@@ -86,7 +88,7 @@ export async function currentUser() {
   ) {
     return null;
   }
-
+// TODAS ESSAS INFORMAÇÕES PORQUE FICA MAIS FÁCIL DE PUXAR EM VÁRIOS LUGARES
   return {
     id: Number(user.id),
     nome: String(user.nome),
