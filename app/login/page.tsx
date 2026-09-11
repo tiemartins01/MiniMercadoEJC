@@ -34,22 +34,6 @@ export default function Login(){
     };
   }, [r]);
 
-  async function submit(e:React.FormEvent) {
-    e.preventDefault();
-    setLoading(true);
-    setErro("");
-
-    const res = await fetch("/api/auth/login",{
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-            login,
-            senha
-        }),
-    });
-
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
@@ -105,8 +89,8 @@ export default function Login(){
             src="/ebs-logo.png"
             alt="EBS"
             style={{
-              width: 90,
-              height: 90,
+              width: 200,
+              height: 200,
               objectFit: "contain",
             }}
           />
@@ -235,5 +219,4 @@ export default function Login(){
       </div>
     </main>
   );
-}
 }
